@@ -1,0 +1,315 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  background: #0b1220;
+  color: #e5edf7;
+  font-family: Arial, sans-serif;
+}
+
+.app {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 245px;
+  background: #111c2e;
+  padding: 30px 20px;
+  border-right: 1px solid #26354a;
+  position: fixed;
+  top: 0;
+  bottom: 0;
+}
+
+.sidebar h2 {
+  color: #45a8ff;
+  font-size: 27px;
+}
+
+.subtitle {
+  color: #91a4ba;
+  font-size: 10px;
+  letter-spacing: 2px;
+  margin-top: 5px;
+  margin-bottom: 45px;
+}
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+nav a {
+  padding: 13px;
+  border-radius: 8px;
+  color: #aab9cc;
+  cursor: pointer;
+}
+
+nav a:hover,
+nav .active {
+  background: #1c3858;
+  color: #5db5ff;
+}
+
+.sidebar-footer {
+  position: absolute;
+  bottom: 25px;
+  color: #8195ad;
+  font-size: 11px;
+  line-height: 2;
+}
+
+.main {
+  margin-left: 245px;
+  padding: 35px;
+  width: calc(100% - 245px);
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+header h1 {
+  font-size: 27px;
+}
+
+header p,
+.card p,
+.module p {
+  color: #8fa3ba;
+  margin-top: 8px;
+}
+
+.user {
+  background: #1c2d43;
+  padding: 12px 18px;
+  border-radius: 8px;
+  color: #72baff;
+}
+
+.welcome {
+  background: linear-gradient(110deg, #163b60, #10243b);
+  padding: 30px;
+  border-radius: 14px;
+  margin-bottom: 25px;
+}
+
+.welcome h2 {
+  margin-bottom: 12px;
+}
+
+.welcome p {
+  color: #c0d5e9;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-bottom: 35px;
+}
+
+.card {
+  background: #142033;
+  padding: 22px;
+  border: 1px solid #263951;
+  border-radius: 12px;
+}
+
+.card span {
+  color: #9bacc0;
+  font-size: 13px;
+}
+
+.card h2 {
+  color: #53b1ff;
+  font-size: 32px;
+  margin-top: 15px;
+}
+/* TARJETAS DE ALERTA */
+
+.alert-card {
+  border: 1px solid #475569;
+  transition: transform 0.3s, border-color 0.3s;
+}
+
+.alert-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Mantenimientos vencidos */
+.alert-card:nth-of-type(5) {
+  border: 1px solid #ef4444;
+  background: #2b1720;
+}
+
+.alert-card:nth-of-type(5) h2 {
+  color: #f87171;
+}
+
+/* Próximos 7 días */
+.alert-card:nth-of-type(6) {
+  border: 1px solid #eab308;
+  background: #292514;
+}
+
+.alert-card:nth-of-type(6) h2 {
+  color: #facc15;
+}
+/* TARJETAS DE ALERTA */
+.alert-card {
+  transition: transform 0.3s, border-color 0.3s;
+}
+
+.alert-card:hover {
+  transform: translateY(-4px);
+}
+
+/* Mantenimientos vencidos */
+.vencidos {
+  background: #2b1720;
+  border: 1px solid #ef4444;
+}
+
+.vencidos h2 {
+  color: #f87171;
+}
+
+/* Próximos 7 días */
+.proximos {
+  background: #292514;
+  border: 1px solid #eab308;
+}
+
+.proximos h2 {
+  color: #facc15;
+}
+.modules h2 {
+  margin-bottom: 20px;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.module {
+  background: #142033;
+  border: 1px solid #263951;
+  border-radius: 12px;
+  padding: 25px;
+}
+
+.module h3 {
+  color: #63b8ff;
+}
+
+@media (max-width: 900px) {
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .module-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .sidebar {
+    width: 175px;
+  }
+
+  .main {
+    margin-left: 175px;
+    width: calc(100% - 175px);
+    padding: 18px;
+  }
+
+  .stats {
+    grid-template-columns: 1fr;
+  }
+}
+/* GRAFICA DE ESTADISTICAS */
+
+.chart-section {
+  background: #142033;
+  border: 1px solid #263951;
+  border-radius: 12px;
+  padding: 25px;
+  margin: 25px 0;
+}
+
+.chart-section h2 {
+  color: #53b1ff;
+  margin-bottom: 8px;
+}
+
+.chart-section p {
+  color: #9bacc0;
+  margin-bottom: 25px;
+}
+
+.chart-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.chart-item {
+  display: grid;
+  grid-template-columns: 120px 1fr 35px;
+  align-items: center;
+  gap: 15px;
+  color: #e2e8f0;
+}
+
+.chart-track {
+  height: 16px;
+  background: #263951;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.chart-fill {
+  height: 100%;
+  border-radius: 20px;
+  transition: width 0.5s ease;
+}
+
+.chart-fill.programados {
+  background: #3b82f6;
+}
+
+.chart-fill.en-proceso {
+  background: #facc15;
+}
+
+.chart-fill.completados {
+  background: #22c55e;
+}
+
+.chart-item strong {
+  text-align: center;
+  color: #ffffff;
+}
+
+@media (max-width: 600px) {
+  .chart-item {
+    grid-template-columns: 1fr 35px;
+  }
+
+  .chart-item span {
+    grid-column: 1 / -1;
+  }
+}
