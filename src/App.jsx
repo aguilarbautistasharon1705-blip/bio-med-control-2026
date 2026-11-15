@@ -189,7 +189,11 @@ const equiposFiltrados = equipos.filter((equipo) => {
     equipo.estado === filtroEstadoInventario;
 
   return coincideBusqueda && coincideEstado;
-});
+}).sort((a, b) =>
+  (a.nombre || "").localeCompare(b.nombre || "", "es", {
+    sensitivity: "base"
+  })
+);
 
 const mantenimientosFiltradosReporte = mantenimientos.filter((m) => {
   const texto = busquedaReporte.toLowerCase();
