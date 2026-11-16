@@ -174,7 +174,11 @@ const equiposFuncionando = equipos.filter(
 const equiposFueraServicio = equipos.filter(
   (equipo) => equipo.estado === "Fuera de servicio"
 ).length;
-
+const equiposOrdenados = [...equipos].sort((a, b) =>
+  (a.nombre || "").localeCompare(b.nombre || "", "es", {
+    sensitivity: "base"
+  })
+);
 const equiposFiltrados = equipos.filter((equipo) => {
   const texto = busquedaInventario.toLowerCase();
 
@@ -705,7 +709,7 @@ const exportarExcel = async () => {
     ];
 
     hojaEquipos.addRows(
-      equipos.map((equipo) => ({
+      equiposOrdenados.map((equipo) => ({
         Equipo: equipo.nombre || "",
         Marca: equipo.marca || "",
         Modelo: equipo.modelo || "",
@@ -831,7 +835,7 @@ const exportarPDF = () => {
       "Estado"
     ]],
     body: equipos.length > 0
-      ? equipos.map((equipo) => [
+      ? equiposOrdenados.map((equipo) => [
           equipo.nombre || "",
           equipo.marca || "",
           equipo.modelo || "",
@@ -1240,7 +1244,7 @@ const exportarPDF = () => {
           >
             <option value="">Selecciona un equipo</option>
 
-            {equipos.map((equipo, indice) => (
+            {equiposOrdenados.map((equipo, indice) => (
               <option key={indice} value={equipo.inventario}>
                 {equipo.nombre} - {equipo.inventario}
               </option>
@@ -1330,7 +1334,7 @@ const exportarPDF = () => {
       </thead>
 
       <tbody>
-  {equipos.map((equipo) => (
+  {equiposOrdenados.map((equipo) => (
     <tr key={equipo.inventario}>
       <td>{equipo.nombre}</td>
 
