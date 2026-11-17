@@ -167,6 +167,27 @@ const [mantenimientoActual, setMantenimientoActual] = useState({
   estado: "Programado",
   observaciones: ""
 });
+const [mantenimientoEditandoId, setMantenimientoEditandoId] = useState(null);
+
+const [datosEdicionMantenimiento, setDatosEdicionMantenimiento] = useState({
+  inventario: "",
+  tipo: "Preventivo",
+  fecha: "",
+  responsable: "",
+  estado: "Programado",
+  observaciones: ""
+});
+const [nombreEquipoGrupal, setNombreEquipoGrupal] = useState("");
+
+const [equiposSeleccionadosGrupal, setEquiposSeleccionadosGrupal] = useState([]);
+
+const [mantenimientoGrupal, setMantenimientoGrupal] = useState({
+    tipo: "Preventivo",
+    fecha: "",
+    responsable: "",
+    estado: "Completado",
+    observaciones: ""
+});
 const equiposFuncionando = equipos.filter(
   (equipo) => equipo.estado === "En funcionamiento"
 ).length;
@@ -179,6 +200,25 @@ const equiposOrdenados = [...equipos].sort((a, b) =>
     sensitivity: "base"
   })
 );
+const nombresTiposEquipo = [...new Set(
+    equipos
+        .map((equipo) => (equipo.nombre || "").trim())
+        .filter(Boolean)
+)].sort((a, b) => a.localeCompare(b, "es", {
+    sensitivity: "base"
+}));
+
+const equiposDelTipoGrupal = equipos
+    .filter((equipo) =>
+        (equipo.nombre || "").trim() === nombreEquipoGrupal
+    )
+    .sort((a, b) =>
+        (a.inventario || "").localeCompare(
+            b.inventario || "",
+            "es",
+            { numeric: true, sensitivity: "base" }
+        )
+    );
 const equiposFiltrados = equipos.filter((equipo) => {
   const texto = busquedaInventario.toLowerCase();
 
@@ -305,6 +345,108 @@ const cambiarEstadoMantenimiento = async (id, nuevoEstado) => {
     alert("No se pudo actualizar el estado en la nube.");
   }
 };
+
+const editarMantenimiento = (mantenimiento) => {
+    if (!mantenimiento || mantenimiento.id == null) {
+        alert("No se encontró el identificador de este mantenimiento.");
+        return;
+    }
+
+    setDatosEdicionMantenimiento({
+        inventario: mantenimiento.inventario || mantenimiento.numeroInventario || "",
+        tipo: mantenimiento.tipo || "Preventivo",
+        fecha: mantenimiento.fecha || "",
+        responsable: mantenimiento.responsable || "",
+        estado: mantenimiento.estado || "Programado",
+        observaciones: mantenimiento.observaciones || ""
+    });
+
+    setMantenimientoEditandoId(mantenimiento.id);
+    setPagina("Mantenimientos");
+};
+
+const eliminarMantenimiento = async (id) => {
+    const confirmar = window.confirm(
+        "¿Estás segura de eliminar este mantenimiento? Esta acción no se puede deshacer."
+    );
+
+    if (!confirmar) return;
+
+    if (!id) {
+        alert("No se encontró el identificador del mantenimiento.");
+        return;
+    }
+
+    try {
+        const { error } = await supabase
+            .from("mantenimientos")
+            .delete()
+            .eq("id", id);
+
+        if (error) throw error;
+
+        setMantenimientos((anteriores) =>
+            anteriores.filter((m) => m.id !== id)
+        );
+
+        alert("Mantenimiento eliminado correctamente.");
+
+    } catch (error) {
+        console.error("Error al eliminar mantenimiento:", error);
+        alert("No se pudo eliminar el mantenimiento.");
+    }
+};
+const guardarEdicionMantenimiento = async () => {
+    if (
+        !datosEdicionMantenimiento.fecha ||
+        !datosEdicionMantenimiento.responsable.trim()
+    ) {
+        alert("Completa la fecha y el responsable.");
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from("mantenimientos")
+            .update({
+                tipo: datosEdicionMantenimiento.tipo,
+                fecha: datosEdicionMantenimiento.fecha,
+                responsable: datosEdicionMantenimiento.responsable.trim(),
+                estado: datosEdicionMantenimiento.estado,
+                observaciones: datosEdicionMantenimiento.observaciones
+            })
+            .eq("id", mantenimientoEditandoId)
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        const equipoRelacionado = equipos.find(
+            (equipo) => equipo.inventario === data.inventario
+        );
+
+        setMantenimientos((anteriores) =>
+            anteriores.map((mantenimiento) =>
+                mantenimiento.id === data.id
+                    ? {
+                        ...mantenimiento,
+                        ...data,
+                        equipo: equipoRelacionado?.nombre || mantenimiento.equipo,
+                        numeroInventario: data.inventario
+                    }
+                    : mantenimiento
+            )
+        );
+
+        setMantenimientoEditandoId(null);
+
+        alert("Mantenimiento actualizado correctamente.");
+
+    } catch (error) {
+        console.error("Error al editar mantenimiento:", error);
+        alert("No se pudo actualizar el mantenimiento.");
+    }
+};
 const guardarMantenimiento = async () => {
   if (
     !mantenimientoActual.inventario ||
@@ -371,7 +513,80 @@ const guardarMantenimiento = async () => {
   }
 };
 
+const guardarMantenimientoGrupal = async () => {
+    if (
+        !nombreEquipoGrupal ||
+        equiposSeleccionadosGrupal.length === 0 ||
+        !mantenimientoGrupal.fecha ||
+        !mantenimientoGrupal.responsable.trim()
+    ) {
+        alert("Selecciona los equipos y completa la fecha y el responsable.");
+        return;
+    }
 
+    const equiposElegidos = equipos.filter((equipo) =>
+        equiposSeleccionadosGrupal.includes(equipo.id)
+    );
+
+   if (equiposElegidos.some((equipo) => !equipo.inventario?.trim() || equipo.inventario.trim().toUpperCase() === "N/A")) {
+    alert("Todos los equipos seleccionados deben tener un número de inventario válido.");
+    return;
+}
+
+    try {
+        const nuevosRegistros = equiposElegidos.map((equipo) => ({
+            inventario: equipo.inventario,
+            tipo: mantenimientoGrupal.tipo,
+            fecha: mantenimientoGrupal.fecha,
+            responsable: mantenimientoGrupal.responsable.trim(),
+            estado: mantenimientoGrupal.estado,
+            observaciones: mantenimientoGrupal.observaciones
+        }));
+
+        const { data, error } = await supabase
+            .from("mantenimientos")
+            .insert(nuevosRegistros)
+            .select();
+
+        if (error) throw error;
+
+        const nuevosMantenimientos = data.map((registro) => {
+            const equipoRelacionado = equiposElegidos.find(
+                (equipo) => equipo.inventario === registro.inventario
+            );
+
+            return {
+                ...registro,
+                equipo: equipoRelacionado?.nombre || "Equipo no encontrado",
+                numeroInventario: registro.inventario
+            };
+        });
+
+        setMantenimientos((anteriores) => [
+            ...nuevosMantenimientos,
+            ...anteriores
+        ]);
+
+        setNombreEquipoGrupal("");
+        setEquiposSeleccionadosGrupal([]);
+
+        setMantenimientoGrupal({
+            tipo: "Preventivo",
+            fecha: "",
+            responsable: "",
+            estado: "Completado",
+            observaciones: ""
+        });
+
+        alert(
+            `Mantenimiento registrado correctamente para ${data.length} equipos.`
+        );
+
+    } catch (error) {
+        console.error("Error al guardar mantenimientos grupales:", error);
+        alert("No se pudieron guardar los mantenimientos grupales.");
+    }
+};
 const guardarEquipo = async () => {
   if (!equipoActual.nombre.trim() || !equipoActual.inventario.trim()) {
     alert("Ingresa al menos el nombre y el número de inventario.");
@@ -1304,7 +1519,167 @@ const exportarPDF = () => {
         </button>
       )}
     </div>
+<div className="module">
+  <h3>Registro grupal de mantenimiento</h3>
 
+  <p>
+    Selecciona el tipo de equipo y las unidades que recibieron
+    el mismo mantenimiento.
+  </p>
+
+  <div className="form-group">
+    <label>Tipo de equipo:</label>
+
+    <select
+      value={nombreEquipoGrupal}
+      onChange={(e) => {
+        setNombreEquipoGrupal(e.target.value);
+        setEquiposSeleccionadosGrupal([]);
+      }}
+    >
+      <option value="">Selecciona un equipo</option>
+
+      {nombresTiposEquipo.map((nombre) => (
+        <option key={nombre} value={nombre}>
+          {nombre}
+        </option>
+      ))}
+    </select>
+  </div>
+
+  {nombreEquipoGrupal && (
+    <div className="form-group">
+      <label>Selecciona las unidades:</label>
+
+      {equiposDelTipoGrupal.length === 0 ? (
+        <p>No hay equipos registrados de este tipo.</p>
+      ) : (
+        <div>
+          {equiposDelTipoGrupal.map((equipo) => (
+            <label
+              key={equipo.id}
+              style={{
+                display: "block",
+                margin: "10px 0"
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={equiposSeleccionadosGrupal.includes(equipo.id)}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setEquiposSeleccionadosGrupal((anteriores) => [
+                      ...anteriores,
+                      equipo.id
+                    ]);
+                  } else {
+                    setEquiposSeleccionadosGrupal((anteriores) =>
+                      anteriores.filter((id) => id !== equipo.id)
+                    );
+                  }
+                }}
+              />
+
+              {" "}Inventario: {equipo.inventario || "Sin número"}
+            </label>
+          ))}
+        </div>
+      )}
+
+      <p>
+        Unidades seleccionadas: {equiposSeleccionadosGrupal.length}
+      </p>
+    </div>
+  )}
+
+  <div className="form-group">
+    <label>Tipo de mantenimiento:</label>
+
+    <select
+      value={mantenimientoGrupal.tipo}
+      onChange={(e) =>
+        setMantenimientoGrupal({
+          ...mantenimientoGrupal,
+          tipo: e.target.value
+        })
+      }
+    >
+      <option value="Preventivo">Preventivo</option>
+      <option value="Correctivo">Correctivo</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>Fecha del mantenimiento:</label>
+
+    <input
+      type="date"
+      value={mantenimientoGrupal.fecha}
+      onChange={(e) =>
+        setMantenimientoGrupal({
+          ...mantenimientoGrupal,
+          fecha: e.target.value
+        })
+      }
+    />
+  </div>
+
+  <div className="form-group">
+    <label>Responsable:</label>
+
+    <input
+      type="text"
+      value={mantenimientoGrupal.responsable}
+      onChange={(e) =>
+        setMantenimientoGrupal({
+          ...mantenimientoGrupal,
+          responsable: e.target.value
+        })
+      }
+      placeholder="Nombre del responsable"
+    />
+  </div>
+
+  <div className="form-group">
+    <label>Estado:</label>
+
+    <select
+      value={mantenimientoGrupal.estado}
+      onChange={(e) =>
+        setMantenimientoGrupal({
+          ...mantenimientoGrupal,
+          estado: e.target.value
+        })
+      }
+    >
+      <option value="Programado">Programado</option>
+      <option value="En proceso">En proceso</option>
+      <option value="Completado">Completado</option>
+    </select>
+  </div>
+
+  <div className="form-group">
+    <label>Observaciones:</label>
+
+    <textarea
+      value={mantenimientoGrupal.observaciones}
+      onChange={(e) =>
+        setMantenimientoGrupal({
+          ...mantenimientoGrupal,
+          observaciones: e.target.value
+        })
+      }
+      placeholder="Describe las actividades realizadas..."
+    />
+  </div>
+
+  <button
+    className="save-button"
+    onClick={guardarMantenimientoGrupal}
+  >
+    Registrar mantenimiento grupal
+  </button>
+</div>
 <div className="module">
   <h3>Programa anual de mantenimiento</h3>
 
@@ -1409,6 +1784,7 @@ const exportarPDF = () => {
                 <th>Responsable</th>
                 <th>Estado</th>
                 <th>Observaciones</th>
+                <th>Acciones</th>
               </tr>
             </thead>
 
@@ -1437,6 +1813,23 @@ const exportarPDF = () => {
   </select>
 </td>
                   <td>{mantenimiento.observaciones}</td>
+                  <td>
+    <button
+        type="button"
+        className="edit-button"
+        onClick={() => editarMantenimiento(mantenimiento)}
+    >
+        Editar
+    </button>
+
+    <button
+        type="button"
+        className="delete-button"
+        onClick={() => eliminarMantenimiento(mantenimiento.id)}
+    >
+        Eliminar
+    </button>
+</td>
                 </tr>
               ))}
             </tbody>
@@ -1491,6 +1884,103 @@ const exportarPDF = () => {
     </div>
 
     <div className="module">
+      {mantenimientoEditandoId !== null && (
+    <div className="module">
+        <h3>Editar mantenimiento</h3>
+
+        <p>
+            Número de inventario: {datosEdicionMantenimiento.inventario}
+        </p>
+
+        <div className="form-group">
+            <label>Tipo de mantenimiento:</label>
+            <select
+                value={datosEdicionMantenimiento.tipo}
+                onChange={(e) =>
+                    setDatosEdicionMantenimiento({
+                        ...datosEdicionMantenimiento,
+                        tipo: e.target.value
+                    })
+                }
+            >
+                <option value="Preventivo">Preventivo</option>
+                <option value="Correctivo">Correctivo</option>
+            </select>
+        </div>
+
+        <div className="form-group">
+            <label>Fecha:</label>
+            <input
+                type="date"
+                value={datosEdicionMantenimiento.fecha}
+                onChange={(e) =>
+                    setDatosEdicionMantenimiento({
+                        ...datosEdicionMantenimiento,
+                        fecha: e.target.value
+                    })
+                }
+            />
+        </div>
+
+        <div className="form-group">
+            <label>Responsable:</label>
+            <input
+                type="text"
+                value={datosEdicionMantenimiento.responsable}
+                onChange={(e) =>
+                    setDatosEdicionMantenimiento({
+                        ...datosEdicionMantenimiento,
+                        responsable: e.target.value
+                    })
+                }
+            />
+        </div>
+
+        <div className="form-group">
+            <label>Estado:</label>
+            <select
+                value={datosEdicionMantenimiento.estado}
+                onChange={(e) =>
+                    setDatosEdicionMantenimiento({
+                        ...datosEdicionMantenimiento,
+                        estado: e.target.value
+                    })
+                }
+            >
+                <option value="Programado">Programado</option>
+                <option value="En proceso">En proceso</option>
+                <option value="Completado">Completado</option>
+            </select>
+        </div>
+
+        <div className="form-group">
+            <label>Observaciones:</label>
+            <textarea
+                value={datosEdicionMantenimiento.observaciones}
+                onChange={(e) =>
+                    setDatosEdicionMantenimiento({
+                        ...datosEdicionMantenimiento,
+                        observaciones: e.target.value
+                    })
+                }
+            />
+        </div>
+
+        <button
+            className="save-button"
+            onClick={guardarEdicionMantenimiento}
+        >
+            Guardar cambios
+        </button>
+
+        <button
+            className="delete-button"
+            onClick={() => setMantenimientoEditandoId(null)}
+        >
+            Cancelar
+        </button>
+    </div>
+)}
       <h3>Listado general</h3>
 
       {mantenimientos.length === 0 ? (
@@ -1506,6 +1996,7 @@ const exportarPDF = () => {
                 <th>Fecha</th>
                 <th>Responsable</th>
                 <th>Estado</th>
+                <th>Acciones</th>
               </tr>
             </thead>
 
@@ -1516,9 +2007,28 @@ const exportarPDF = () => {
                   <td>{mantenimiento.numeroInventario}</td>
                   <td>{mantenimiento.tipo}</td>
                   <td>{mantenimiento.fecha}</td>
-                  <td>{mantenimiento.responsable}</td>
-                  <td>{mantenimiento.estado}</td>
-                </tr>
+                <td>{mantenimiento.responsable}</td>
+<td>{mantenimiento.estado}</td>
+
+<td>
+    <button
+        type="button"
+        className="edit-button"
+        onClick={() => editarMantenimiento(mantenimiento)}
+    >
+        Editar
+    </button>
+
+    <button
+        type="button"
+        className="delete-button"
+        onClick={() => eliminarMantenimiento(mantenimiento.id)}
+    >
+        Eliminar
+    </button>
+</td>
+
+</tr>
               ))}
             </tbody>
           </table>
